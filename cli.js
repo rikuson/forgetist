@@ -1,10 +1,13 @@
 #!/usr/bin/env node
 
 const request = require('request')
+const sqlite3 = require('sqlite3');
 const log4js = require('log4js')
 const logger = log4js.getLogger();
 
 const API_URL = 'https://api.todoist.com/rest/v1/tasks';
+
+const db = new sqlite3.Database('deleted_tasks.sqlite3');
 
 const today = new Date();
 const y = today.getFullYear();
@@ -29,91 +32,98 @@ require('yargs')
     (yargs) => {
       yargs.positional('id', { describe: 'task id' });
     },
-    (argv) => {
-      argv.all ? forgetAll() : forget(argv.id);
-    })
+    forget,
+  )
   .option('all', {
     alias: 'a',
     type: 'boolean',
-    description: 'Delete all of the overdue task'
+    description: 'Delete all of the overdue task',
   })
   .command(
     'list',
     'List overdue tasks',
     (yargs) => {},
-    (argv) => {
-      argv.all ? listDetail() : list();
-    }
+    list,
   )
   .argv
 
-function list() {
-  request({ url: API_URL, method: 'GET' }, (e, response, body) => {
-    try {
-      if (e) throw e;
+async function forget(argv) {
+  try {
+    db.serialize(() => {
+      db.run(`create table if not exists deleted_tasks (
+        id integer primary key,
+        content text,
+        created datetime,
+        due_date datetime
+      )`);
+    });
+    const tasks = await getTasks();
+    const targets = argv.id.map(id => {
+      const reg = new RegExp(id + '.+');
+      const matched = tasks.filter(task => argv.all || String(task.id).match(reg));
+      if (matched.length !== 1) throw new Error(`ambiguous argument: '${id}'`);
+      return matched[0];
+    });
+    targets.forEach(async task => {
+      const deletedTask = await deleteTask(task);
+      console.info('Deleted', deletedTask.id);
+      const { id, content, created, due } = task;
+      db.run(`insert or replace into deleted_tasks
+        (id, content, created, due_date)
+        values ($id, $content, $created, $due_date)
+      `, id, content, created, due.date);
+      logger.info('Deleted', deletedTask);
+    });
+  } catch (e) {
+    console.error(e);
+    logger.error(e);
+  }
+}
+
+async function list(argv) {
+  try {
+    const tasks = await getTasks();
+    // TODO: think about api interval limit
+    // Use que?
+    const table = tasks.map(task => ({
+      'ID': task.id,
+      'CONTENT': task.content,
+      'CREATED': task.created,
+      'DUE DATE': task.due.date,
+    }));
+    console.table(table);
+  } catch (e) {
+    console.error(e);
+    logger.error(e);
+  }
+}
+
+function getTasks() {
+  return new Promise((resolve, reject) => {
+    request({ url: API_URL, method: 'GET' }, (error, response, body) => {
+      if (error) {
+        reject(error);
+        return false;
+      }
       const tasks = JSON.parse(body);
       const overDueTasks = tasks.filter(task => {
         if (!task.due) return false;
-
         const dueDate = new Date(task.due.date);
         return dueDate < today;
       });
-      console.table(overDueTasks.map(task => ({
-        'ID': task.id,
-        'CONTENT': task.content,
-        'CREATED_AT': task.created,
-        'DUE_DATE': task.due.date,
-      })));
-    } catch (e) {
-      logger.error(body);
-    }
-  }).auth(null, null, true, process.env.TODOIST_API_TOKEN);
+      resolve(overDueTasks);
+    }).auth(null, null, true, process.env.TODOIST_API_TOKEN);
+  });
 }
 
-function listDetail() {
-}
-
-function forget(ids) {
-  request({ url: API_URL, method: 'GET' }, (e, response, body) => {
-    try {
-      if (e) throw e;
-      const tasks = JSON.parse(body);
-      tasks.filter(task => ids.includes(task.id)).forEach(task => {
-        if (!task.due) throw new Error('due date is not set'); // TODO: specify id
-
-        const dueDate = new Date(task.due.date);
-        if (dueDate >= today) throw new Error('task is not overdue'); // TODO: specify id
-
-        request({ url: API_URL + '/' + task.id, method: 'DELETE' }, (e, response, body) => {
-          if (e) throw e;
-          console.info('task is forgotten');
-          logger.info(task);
-        }).auth(null, null, true, process.env.TODOIST_API_TOKEN);
-      })
-    } catch (e) {
-      logger.error(body);
-    }
-  }).auth(null, null, true, process.env.TODOIST_API_TOKEN);;
-}
-
-function forgetAll() {
-  request({ url: API_URL, method: 'GET' }, (e, response, body) => {
-    try {
-      if (e) throw e;
-      const tasks = JSON.parse(body);
-      tasks.forEach(task => {
-        if (!task.due) return false;
-
-        const dueDate = new Date(task.due.date);
-        if (dueDate >= today) return false;
-
-        request({ url: API_URL + '/' + task.id, method: 'DELETE' }, (e, response, body) => {
-          if (e) throw e;
-          logger.info(task);
-        }).auth(null, null, true, process.env.TODOIST_API_TOKEN);
-      });
-    } catch (e) {
-      logger.error(body);
-    }
-  }).auth(null, null, true, process.env.TODOIST_API_TOKEN);
+function deleteTask(task) {
+  return new Promise((resolve, reject) => {
+    request({ url: API_URL + '/' + task.id, method: 'DELETE' }, (error, response, body) => {
+      if (error) {
+        reject(error);
+        return false;
+      }
+      resolve(task);
+    }).auth(null, null, true, process.env.TODOIST_API_TOKEN);
+  });
 }

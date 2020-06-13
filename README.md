@@ -28,9 +28,15 @@ List overdue tasks.
 
 ```
 $ forgetist list
+┌─────┬──────┬───────┬────────────┬───────┐
+│ (index)  │     ID     │   CONTENT    │        CREATED         │   DUE DATE   │
+├─────┼──────┼───────┼────────────┼───────┤
+│    0     │ 1234567890 │'first task'  │'2020-06-11T11:19:55Z'  │ '2020-06-11' │
+│    1     │ 2345678901 │'second task' │'2020-06-11T16:49:47Z'  │ '2020-06-09' │
+└─────┴──────┴───────┴────────────┴───────┘
 ```
 
-More detailed.
+List all overdue tasks including deleted task.
 
 ```
 $ forgetist list --all
@@ -54,12 +60,11 @@ Don't worry, there's log option.
 $ forgetist forget 1234 --log
 ```
 
-## TODO
+Reschedule a task.
 
-- Reschedule(remember)
-- Delete due date
-- Colored list
-- List fogotten list(forgotten)
+```
+$ forgetist remember 1234 --to="2020-06-13"
+```
 
 ## Want pressure?
 
