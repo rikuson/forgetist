@@ -45,6 +45,11 @@ require('yargs')
     (yargs) => {},
     list,
   )
+  .option('all', {
+    alias: 'a',
+    type: 'boolean',
+    description: 'List all of the overdue task',
+  })
   .argv
 
 async function forget(argv) {
@@ -58,7 +63,7 @@ async function forget(argv) {
       )`);
     });
     const tasks = await getTasks();
-    const targets = argv.id.map(id => {
+    const targets = argv.all ? tasks : argv.id.map(id => {
       const reg = new RegExp(id + '.+');
       const matched = tasks.filter(task => argv.all || String(task.id).match(reg));
       if (matched.length !== 1) throw new Error(`ambiguous argument: '${id}'`);
@@ -71,7 +76,7 @@ async function forget(argv) {
       db.run(`insert or replace into deleted_tasks
         (id, content, created, due_date)
         values ($id, $content, $created, $due_date)
-      `, id, content, created, due.date);
+      `, id, content, created, due_date);
       logger.info('Deleted', deletedTask);
     });
   } catch (e) {
@@ -82,14 +87,18 @@ async function forget(argv) {
 
 async function list(argv) {
   try {
-    const tasks = await getTasks();
+    let targets = await getTasks();
+    if (argv.all) {
+      const deletedTasks = await getDeletedTasks();
+      targets = targets.concat(deletedTasks).sort((a, b) => a.created > b.created);
+    }
     // TODO: think about api interval limit
     // Use que?
-    const table = tasks.map(task => ({
+    const table = targets.map(task => ({
       'ID': task.id,
       'CONTENT': task.content,
       'CREATED': task.created,
-      'DUE DATE': task.due.date,
+      'DUE DATE': task.due_date,
     }));
     console.table(table);
   } catch (e) {
@@ -106,11 +115,13 @@ function getTasks() {
         return false;
       }
       const tasks = JSON.parse(body);
-      const overDueTasks = tasks.filter(task => {
-        if (!task.due) return false;
-        const dueDate = new Date(task.due.date);
-        return dueDate < today;
-      });
+      const overDueTasks = tasks
+        .filter(task => {
+          if (!task.due) return false;
+          const dueDate = new Date(task.due.date);
+          return dueDate < today;
+        })
+        .map(task => Object.assign(task, { due_date: task.due.date }));
       resolve(overDueTasks);
     }).auth(null, null, true, process.env.TODOIST_API_TOKEN);
   });
@@ -125,5 +136,16 @@ function deleteTask(task) {
       }
       resolve(task);
     }).auth(null, null, true, process.env.TODOIST_API_TOKEN);
+  });
+}
+
+function getDeletedTasks() {
+  return new Promise((resolve, reject) => {
+    db.all(`select * from deleted_tasks`, (error, rows) => {
+      if (error) {
+        reject(error);
+      }
+      resolve(rows);
+    });
   });
 }
