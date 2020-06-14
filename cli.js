@@ -21,6 +21,8 @@ const api = {
   delete: bent(API_URL, 'DELETE', 'json', 204),
 };
 
+const LANG = Intl.NumberFormat().resolvedOptions().locale.slice(0, 2);
+
 const today = new Date();
 
 const db = new sqlite3.Database('deleted_tasks.sqlite3');
@@ -86,6 +88,10 @@ require('yargs')
     type: 'string',
     description: 'Path to log directory',
   })
+  .option('lang', {
+    type: 'string',
+    description: 'Specify language to parse date string',
+  })
   .argv;
 
 async function forget(argv) {
@@ -125,8 +131,7 @@ async function list(argv) {
     // TODO: think about api interval limit
     // Use que?
     const table = targets.map(task => ({
-      // TODO: task.id.toString(16)
-      // TODO: use index sort by created
+      // TODO: HASH: sha1(task.id)
       'ID': task.id,
       'CONTENT': task.content,
       'CREATED': task.created,
@@ -154,12 +159,15 @@ async function remember(argv) {
       });
     }
     targets.forEach(task => {
+      task.due_date = argv.until;
+      task.due_lang = argv.lang || LANG;
+      console.info('Remember', task.id);
       if (task.deleted) {
-        // TODO: convert db column to api
-        createTask(Object.assign(task, { due_date: argv.until }));
+        createTask(task);
       } else {
-        updateTask(Object.assign(task, { due_date: argv.until }));
+        updateTask(task);
       }
+      logger.info('Remembered', task);
     });
   } catch(e) {
     console.error(e);
@@ -216,9 +224,20 @@ function getDeletedTasks() {
 }
 
 function createTask(task) {
-  return api.create('', task, api.header);
+  const body = {};
+  for (let key in task) {
+    const value = String(task[key]);
+    if (value) body[key] = value;
+  }
+  return api.create('', body, api.header);
 }
 
 function updateTask(task) {
-  return api.update('/' + task.id, task, api.header);
+  const body = {};
+  for (let key in task) {
+    const value = String(task[key]);
+    if (value) body[key] = value;
+  }
+  const { content, due_date, due_lang } = task;
+  return api.update('/' + task.id, { content, due_date, due_lang }, api.header);
 }
