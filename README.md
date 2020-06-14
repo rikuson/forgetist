@@ -24,6 +24,24 @@ export TODOIST_API_TOKEN=XXXXXXXXXXXXXXXX
 
 ## Usage
 
+```
+$ forgetist --help
+forgetist [command]
+
+Commands:
+  forgetist forget [id...]    Delete overdue task
+  forgetist list              List overdue tasks
+  forgetist remember [id...]  Reschedule overdue tasks
+
+Options:
+  --help             Show help                                         [boolean]
+  --version          Show version number                               [boolean]
+  --all, -a          All of the overdue task                           [boolean]
+  --from             From the datetime                                 [string]
+  --to               To the datetime                                   [string]
+  --until, -u        Due date                                          [string]
+```
+
 List overdue tasks.
 
 ```
@@ -40,6 +58,7 @@ List all overdue tasks including deleted task.
 
 ```
 $ forgetist list --all
+$ forgetist list --from="2020-06-10"
 ```
 
 Delete overdue tasks.

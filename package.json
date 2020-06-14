@@ -7,8 +7,8 @@
     "forgetist": "cli.js"
   },
   "dependencies": {
+    "bent": "^7.3.4",
     "log4js": "^6.3.0",
-    "request": "^2.88.2",
     "sqlite3": "^4.2.0",
     "yargs": "^15.3.1"
   },
