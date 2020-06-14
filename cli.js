@@ -1,47 +1,43 @@
 #!/usr/bin/env node
+"use strict";
 
 // TODO: Enable using without network
 // TODO: Chache api data to make it fast
-// TODO: Rename deleted_tasks.sqlite3 overdue_tasks.sqlite3
+// TODO: Rename deleted_tasks.sqlite3 overdue_tasks.sqlite3 or cache.sqlite3
 // TODO: Add columns is_deleted, is_lost
 const bent = require('bent')
 const sqlite3 = require('sqlite3');
-const log4js = require('log4js')
+const log4js = require('log4js');
+const path = require('path');
+
 const logger = log4js.getLogger();
 
 const API_URL = 'https://api.todoist.com/rest/v1/tasks';
 const api = {
-  get: bent(API_URL, 'GET', 'json', 200),
-  delete: bent(API_URL, 'DELETE', 'json', 204),
-  create: bent(API_URL, 'POST', 'json', 200),
-  update: bent(API_URL, 'POST', 'json', 204),
   header: { 'Authorization': 'Bearer ' + process.env.TODOIST_API_TOKEN },
+  create: bent(API_URL, 'POST', 'json', 200),
+  read: bent(API_URL, 'GET', 'json', 200),
+  update: bent(API_URL, 'POST', 'json', 204),
+  delete: bent(API_URL, 'DELETE', 'json', 204),
 };
 
-const db = new sqlite3.Database('deleted_tasks.sqlite3');
-db.serialize(() => {
-  db.run(`create table if not exists deleted_tasks (
-    id integer primary key,
-    content text,
-    created datetime,
-    due_date datetime,
-    deleted datetime
-  )`);
-});
-
 const today = new Date();
-const y = today.getFullYear();
-const m = ('0' + (1 + today.getMonth())).slice(-2);
-const d = ('0' + today.getDate()).slice(-2);
-const filename =  'logs/' + [y, m, d].join('-') + '.log';
-log4js.configure({
-  appenders: {
-    system: { type: 'file', filename }
-  },
-  categories: {
-    default: { appenders: ['system'], level: 'info' },
-  },
-});
+
+const db = new sqlite3.Database('deleted_tasks.sqlite3');
+try {
+  db.serialize(() => {
+    db.run(`create table if not exists deleted_tasks (
+      id integer primary key,
+      content text,
+      created datetime,
+      due_date datetime,
+      deleted datetime
+    )`);
+  });
+} catch(e) {
+  console.error(e);
+  logger.error(e);
+}
 
 // TODO: unknown command
 // TODO: invalid options
@@ -63,7 +59,9 @@ require('yargs')
   .command(
     'remember [id...]',
     'Reschedule overdue tasks',
-    (yargs) => {},
+    (yargs) => {
+      yargs.positional('id', { describe: 'task id' });
+    },
     remember,
   )
   .option('all', {
@@ -81,13 +79,18 @@ require('yargs')
   })
   .option('until', {
     alias: 'u',
-    type: 'boolean',
+    type: 'string',
     description: 'Due date',
+  })
+  .option('log', {
+    type: 'string',
+    description: 'Path to log directory',
   })
   .argv;
 
 async function forget(argv) {
   try {
+    if (argv.log) setUpLogger(argv.log);
     const tasks = await getTasks();
     const targets = argv.all ? tasks : argv.id.map(id => {
       const reg = new RegExp(id + '.+');
@@ -113,6 +116,7 @@ async function forget(argv) {
 
 async function list(argv) {
   try {
+    if (argv.log) setUpLogger(argv.log);
     let targets = await getTasks();
     if (argv.all) {
       const deletedTasks = await getDeletedTasks();
@@ -138,6 +142,7 @@ async function list(argv) {
 
 async function remember(argv) {
   try {
+    if (argv.log) setUpLogger(argv.log);
     let targets = await getTasks();
     targets = targets.concat(await getDeletedTasks()).sort((a, b) => a.created > b.created);
     if (!argv.all) {
@@ -162,9 +167,24 @@ async function remember(argv) {
   }
 }
 
+function setUpLogger(dir) {
+  const y = today.getFullYear();
+  const m = ('0' + (1 + today.getMonth())).slice(-2);
+  const d = ('0' + today.getDate()).slice(-2);
+  const filename =  path.resolve(__dirname, dir, [y, m, d].join('-') + '.log');
+  log4js.configure({
+    appenders: {
+      system: { type: 'file', filename }
+    },
+    categories: {
+      default: { appenders: ['system'], level: 'info' },
+    },
+  });
+}
+
 function getTasks() {
   return new Promise((resolve, reject) => {
-    api.get('', null, api.header).then(response => {
+    api.read('', null, api.header).then(response => {
       const tasks = response;
       const overDueTasks = tasks
         .filter(task => {

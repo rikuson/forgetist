@@ -34,12 +34,12 @@ Commands:
   forgetist remember [id...]  Reschedule overdue tasks
 
 Options:
-  --help             Show help                                         [boolean]
-  --version          Show version number                               [boolean]
-  --all, -a          All of the overdue task                           [boolean]
-  --from             From the datetime                                 [string]
-  --to               To the datetime                                   [string]
-  --until, -u        Due date                                          [string]
+  --help             Show help
+  --version          Show version number
+  --all, -a          All of the overdue task
+  --from             From the datetime
+  --to               To the datetime
+  --until, -u        Due date
 ```
 
 List overdue tasks.
