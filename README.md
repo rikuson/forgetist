@@ -1,5 +1,7 @@
 # Forgetist
 
+Life hacking tool using todoist.
+
 ## Let's forget the past
 
 I don't like seeing incomplete tasks which should have done few months ago.  

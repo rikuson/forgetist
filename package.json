@@ -10,6 +10,7 @@
     "bent": "^7.3.4",
     "log4js": "^6.3.0",
     "sqlite3": "^4.2.0",
+    "time-convert": "0.0.2",
     "yargs": "^15.3.1"
   },
   "devDependencies": {},
