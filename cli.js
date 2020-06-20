@@ -4,16 +4,17 @@
 // TODO: Enable using without network
 // TODO: Chache api data to make it fast
 // TODO: Add columns is_deleted, is_lost
-const log4js = require('log4js');
 const path = require('path');
 const {
   db,
   hash,
+  createLogger,
   deleteTask,
   getActiveTasks,
   createTask,
   updateTask,
   getLastId,
+  createCache,
   getCache,
   getActiveCache,
   updateCache,
@@ -21,8 +22,6 @@ const {
 
 const que = []; // TODO: Use setInterval
 const LANG = Intl.NumberFormat().resolvedOptions().locale.slice(0, 2);
-const today = new Date();
-const logger = log4js.getLogger();
 
 // TODO: unknown command
 // TODO: invalid options
@@ -84,8 +83,9 @@ require('yargs')
   .argv;
 
 async function forget(argv) {
+  const logger = createLogger(argv.dir);
   try {
-    init(argv);
+    await sync(argv);
     const cache = await getActiveCache();
     const targets = argv.all ? cache : argv.hash.map(hash => {
       const reg = new RegExp(hash + '.+');
@@ -105,8 +105,9 @@ async function forget(argv) {
 }
 
 async function list(argv) {
+  const logger = createLogger(argv.dir);
   try {
-    await init(argv);
+    await sync(argv);
     const targets = await (argv.all ? getCache : getActiveCache)();
     // TODO: think about api interval limit
     targets.forEach(task => {
@@ -125,8 +126,9 @@ async function list(argv) {
 }
 
 async function remember(argv) {
+  const logger = createLogger(argv.dir);
   try {
-    init(argv);
+    await sync(argv);
     const targets = (await getCache()).sort((a, b) => a.id > b.id);
     if (!argv.all) {
       targets = argv.id.map(id => {
@@ -153,45 +155,9 @@ async function remember(argv) {
   }
 }
 
-async function init(argv) {
-  db.serialize(() => {
-    db.run(`create table if not exists cache (
-      id integer primary key,
-      hash text,
-      project_id integer,
-      section_id integer,
-      content text,
-      label_ids text,
-      parent integer,
-      priority integer,
-      assignee integer,
-      due_date datetime,
-      due_string text,
-      due_recurring integer,
-      created datetime,
-      deleted datetime,
-      synced datetime
-    )`);
-  });
-
-  if (argv.log) setUpLogger(argv.log);
-
+async function sync(argv) {
+  createCache();
   const lastId = await getLastId();
   const tasks = await getActiveTasks();
   tasks.filter(t => t.id > lastId).forEach(t => updateCache(t));
-}
-
-function setUpLogger(dir) {
-  const y = today.getFullYear();
-  const m = ('0' + (1 + today.getMonth())).slice(-2);
-  const d = ('0' + today.getDate()).slice(-2);
-  const filename =  path.resolve(__dirname, dir, [y, m, d].join('-') + '.log');
-  log4js.configure({
-    appenders: {
-      system: { type: 'file', filename }
-    },
-    categories: {
-      default: { appenders: ['system'], level: 'info' },
-    },
-  });
 }
