@@ -13,9 +13,9 @@ const {
   getActiveTasks,
   createTask,
   updateTask,
+  getLastId,
   getCache,
   getActiveCache,
-  getLastId,
   updateCache,
 } = require('./lib');
 
@@ -106,7 +106,7 @@ async function forget(argv) {
 
 async function list(argv) {
   try {
-    init(argv);
+    await init(argv);
     const targets = await (argv.all ? getCache : getActiveCache)();
     // TODO: think about api interval limit
     targets.forEach(task => {
