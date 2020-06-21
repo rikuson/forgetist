@@ -4,7 +4,7 @@
 // TODO: Enable using without network
 // TODO: Chache api data to make it fast
 // TODO: Add columns is_deleted, is_lost
-const { api, cache, createLogger } = require('./lib');
+const { api, cache, createLogger, render } = require('./lib');
 
 const que = []; // TODO: Use setInterval
 const LANG = Intl.NumberFormat().resolvedOptions().locale.slice(0, 2);
@@ -85,7 +85,7 @@ async function forget(argv) {
       return matched[0];
     });
     targets.forEach(task => {
-      console.info('Delete', task.hash);
+      render.forget(task);
       task.deleted = today.toDateString();
       cache.update(task);
       argv.debug ? api.mock('delete', task) : api.delete(task);
@@ -103,15 +103,7 @@ async function list(argv) {
     await sync(argv);
     const targets = await (argv.all ? cache.read() : cache.read('where deleted is null'));
     // TODO: think about api interval limit
-    targets.forEach(task => {
-      console.log('\u001b[93m' + task.hash, (task.deleted ? '\u001b[91m(Deleted)' : '') + '\u001b[0m');
-      console.log('DUE DATE:', task.due_date);
-      console.log('CREATED: ', task.created);
-      if (task.deleted) {
-        console.log('DELETED: ', task.deleted);
-      }
-      console.log("\n", task.content, "\n");
-    });
+    targets.forEach(render.list);
   } catch (e) {
     console.error(e);
     logger.error(e);
@@ -134,7 +126,7 @@ async function remember(argv) {
     targets.forEach(task => {
       task.due_date = argv.until;
       task.due_lang = argv.lang || LANG;
-      console.info('Remember', task.id);
+      render.remember(task);
       if (task.deleted) {
         argv.debug ? api.mock('create', task) : api.create(task);
       } else {
