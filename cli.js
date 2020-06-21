@@ -4,7 +4,6 @@
 // TODO: Enable using without network
 // TODO: Chache api data to make it fast
 // TODO: Add columns is_deleted, is_lost
-// TODO: Debug mode without request
 const { api, cache, createLogger } = require('./lib');
 
 const que = []; // TODO: Use setInterval
@@ -67,6 +66,10 @@ require('yargs')
     type: 'string',
     description: 'Specify language to parse date string',
   })
+  .option('debug', {
+    type: 'boolean',
+    description: 'Debug mode.',
+  })
   .argv;
 
 async function forget(argv) {
@@ -85,7 +88,7 @@ async function forget(argv) {
       console.info('Delete', task.hash);
       task.deleted = today.toDateString();
       cache.update(task);
-      // api.delete(task);
+      argv.debug ? api.mock('delete', task) : api.delete(task);
       logger.info('Deleted', task);
     });
   } catch (e) {
@@ -133,9 +136,9 @@ async function remember(argv) {
       task.due_lang = argv.lang || LANG;
       console.info('Remember', task.id);
       if (task.deleted) {
-        api.create(task);
+        argv.debug ? api.mock('create', task) : api.create(task);
       } else {
-        api.update(task);
+        argv.debug ? api.mock('update', task) : api.update(task);
       }
       logger.info('Remembered', task);
     });
