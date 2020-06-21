@@ -4,21 +4,8 @@
 // TODO: Enable using without network
 // TODO: Chache api data to make it fast
 // TODO: Add columns is_deleted, is_lost
-const path = require('path');
-const {
-  db,
-  hash,
-  createLogger,
-  deleteTask,
-  getActiveTasks,
-  createTask,
-  updateTask,
-  getLastId,
-  createCache,
-  getCache,
-  getActiveCache,
-  updateCache,
-} = require('./lib');
+// TODO: Debug mode without request
+const { api, cache, createLogger } = require('./lib');
 
 const que = []; // TODO: Use setInterval
 const LANG = Intl.NumberFormat().resolvedOptions().locale.slice(0, 2);
@@ -84,18 +71,21 @@ require('yargs')
 
 async function forget(argv) {
   const logger = createLogger(argv.dir);
+  const today = new Date();
   try {
     await sync(argv);
-    const cache = await getActiveCache();
-    const targets = argv.all ? cache : argv.hash.map(hash => {
+    const tasks = await cache.read('where deleted is null');
+    const targets = argv.all ? tasks : argv.hash.map(hash => {
       const reg = new RegExp(hash + '.+');
-      const matched = cache.filter(task => argv.all || String(task.hash).match(reg));
+      const matched = tasks.filter(task => argv.all || String(task.hash).match(reg));
       if (matched.length !== 1) throw new Error(`ambiguous argument: '${hash}'`);
       return matched[0];
     });
     targets.forEach(task => {
-      deleteTask(task);
       console.info('Delete', task.hash);
+      task.deleted = today.toDateString();
+      cache.update(task);
+      // api.delete(task);
       logger.info('Deleted', task);
     });
   } catch (e) {
@@ -108,7 +98,7 @@ async function list(argv) {
   const logger = createLogger(argv.dir);
   try {
     await sync(argv);
-    const targets = await (argv.all ? getCache : getActiveCache)();
+    const targets = await (argv.all ? cache.read() : cache.read('where deleted is null'));
     // TODO: think about api interval limit
     targets.forEach(task => {
       console.log('\u001b[93m' + task.hash, (task.deleted ? '\u001b[91m(Deleted)' : '') + '\u001b[0m');
@@ -129,7 +119,7 @@ async function remember(argv) {
   const logger = createLogger(argv.dir);
   try {
     await sync(argv);
-    const targets = (await getCache()).sort((a, b) => a.id > b.id);
+    const targets = await cache.read();
     if (!argv.all) {
       targets = argv.id.map(id => {
         const reg = new RegExp(id + '.+');
@@ -143,9 +133,9 @@ async function remember(argv) {
       task.due_lang = argv.lang || LANG;
       console.info('Remember', task.id);
       if (task.deleted) {
-        createTask(task);
+        api.create(task);
       } else {
-        updateTask(task);
+        api.update(task);
       }
       logger.info('Remembered', task);
     });
@@ -156,8 +146,9 @@ async function remember(argv) {
 }
 
 async function sync(argv) {
-  createCache();
-  const lastId = await getLastId();
-  const tasks = await getActiveTasks();
-  tasks.filter(t => t.id > lastId).forEach(t => updateCache(t));
+  cache.create();
+  const lastTask = await cache.read('order by id desc limit 1');
+  const lastId = lastTask || 0;
+  const tasks = await api.read();
+  tasks.filter(t => t.id > lastId).forEach(t => cache.update(t));
 }
