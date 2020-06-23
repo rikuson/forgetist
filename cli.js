@@ -2,7 +2,6 @@
 "use strict";
 
 // TODO: Enable using without network
-// TODO: Chache api data to make it fast
 // TODO: Add columns is_deleted, is_lost
 const { api, cache, createLogger, render } = require('./lib');
 
@@ -73,6 +72,7 @@ require('yargs')
   .argv;
 
 async function forget(argv) {
+  global.debug = argv.debug;
   const logger = createLogger(argv.dir);
   const today = new Date();
   try {
@@ -86,9 +86,9 @@ async function forget(argv) {
     });
     targets.forEach(task => {
       render.forget(task);
-      task.deleted = today.toDateString();
+      task.deleted = today.toISOString();
       cache.update(task);
-      argv.debug ? api.mock('delete', task) : api.delete(task);
+      api.delete(task);
       logger.info('Deleted', task);
     });
   } catch (e) {
@@ -98,6 +98,7 @@ async function forget(argv) {
 }
 
 async function list(argv) {
+  global.debug = argv.debug;
   const logger = createLogger(argv.dir);
   try {
     await sync(argv);
@@ -111,6 +112,7 @@ async function list(argv) {
 }
 
 async function remember(argv) {
+  global.debug = argv.debug;
   const logger = createLogger(argv.dir);
   try {
     await sync(argv);
@@ -128,9 +130,9 @@ async function remember(argv) {
       task.due_lang = argv.lang || LANG;
       render.remember(task);
       if (task.deleted) {
-        argv.debug ? api.mock('create', task) : api.create(task);
+        api.create(task);
       } else {
-        argv.debug ? api.mock('update', task) : api.update(task);
+        api.update(task);
       }
       logger.info('Remembered', task);
     });
@@ -143,7 +145,10 @@ async function remember(argv) {
 async function sync(argv) {
   cache.create();
   const lastTask = await cache.read('order by id desc limit 1');
-  const lastId = lastTask || 0;
+  const lastId = lastTask.length ? lastTask[0].id : 0;
   const tasks = await api.read();
-  tasks.filter(t => t.id > lastId).forEach(t => cache.update(t));
+  const today = new Date();
+  tasks
+    .filter(t => t.id > lastId)
+    .forEach(t => cache.update(Object.assign(t, { synced: today.toISOString() })));
 }
