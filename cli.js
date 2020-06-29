@@ -102,7 +102,7 @@ async function list(argv) {
   const logger = createLogger(argv.dir);
   try {
     await sync(argv);
-    const targets = await (argv.all ? cache.read() : cache.read('where deleted is null'));
+    const targets = await (argv.all ? cache.read('ORDER BY id DESC') : cache.read('WHERE DELETED IS NULL ORDER BY id DESC'));
     // TODO: think about api interval limit
     targets.forEach(render.list);
   } catch (e) {
@@ -116,18 +116,19 @@ async function remember(argv) {
   const logger = createLogger(argv.dir);
   try {
     await sync(argv);
-    const targets = await cache.read();
+    let targets = await cache.read();
     if (!argv.all) {
-      targets = argv.id.map(id => {
-        const reg = new RegExp(id + '.+');
-        const matched = targets.filter(task => argv.all || String(task.id).match(reg));
-        if (matched.length !== 1) throw new Error(`ambiguous argument: '${id}'`);
+      targets = argv.hash.map(hash => {
+        const reg = new RegExp(hash + '.+');
+        const matched = targets.filter(task => argv.all || String(task.hash).match(reg));
+        if (matched.length !== 1) throw new Error(`ambiguous argument: '${hash}'`);
         return matched[0];
       });
     }
     targets.forEach(task => {
-      task.due_date = argv.until;
+      task.due_date = argv.until || '';
       task.due_lang = argv.lang || LANG;
+      task.due_string = '';
       render.remember(task);
       if (task.deleted) {
         api.create(task);
@@ -144,7 +145,7 @@ async function remember(argv) {
 
 async function sync(argv) {
   cache.create();
-  const lastTask = await cache.read('order by id desc limit 1');
+  const lastTask = await cache.read('ORDER BY id DESC LIMIT 1');
   const lastId = lastTask.length ? lastTask[0].id : 0;
   const tasks = await api.read();
   const today = new Date();
