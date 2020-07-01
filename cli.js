@@ -3,10 +3,12 @@
 
 // TODO: Enable using without network
 // TODO: Add columns is_deleted, is_lost
-const { api, cache, createLogger, render } = require('./lib');
+const { api, cache, hash, createLogger, render } = require('./lib');
 
 const que = []; // TODO: Use setInterval
 const LANG = Intl.NumberFormat().resolvedOptions().locale.slice(0, 2);
+
+cache.create();
 
 // TODO: unknown command
 // TODO: invalid options
@@ -76,19 +78,19 @@ async function forget(argv) {
   const logger = createLogger(argv.dir);
   const today = new Date();
   try {
-    await sync(argv);
-    const tasks = await cache.read('where deleted is null');
+    const tasks = await api.read();
+    tasks.forEach(task => task.hash = hash(task.id));
     const targets = argv.all ? tasks : argv.hash.map(hash => {
       const reg = new RegExp(hash + '.+');
-      const matched = tasks.filter(task => argv.all || String(task.hash).match(reg));
+      const matched = tasks.filter(task => argv.all || task.hash.match(reg));
       if (matched.length !== 1) throw new Error(`ambiguous argument: '${hash}'`);
       return matched[0];
     });
     targets.forEach(task => {
       render.forget(task);
+      api.delete(task);
       task.deleted = today.toISOString();
       cache.update(task);
-      api.delete(task);
       logger.info('Deleted', task);
     });
   } catch (e) {
@@ -101,10 +103,12 @@ async function list(argv) {
   global.debug = argv.debug;
   const logger = createLogger(argv.dir);
   try {
-    await sync(argv);
-    const targets = await (argv.all ? cache.read('ORDER BY id DESC') : cache.read('WHERE DELETED IS NULL ORDER BY id DESC'));
     // TODO: think about api interval limit
-    targets.forEach(render.list);
+    const targets = await api.read();
+    targets.forEach(target => {
+      target.hash = hash(target.id);
+      render.list(target);
+    });
   } catch (e) {
     console.error(e);
     logger.error(e);
@@ -115,41 +119,15 @@ async function remember(argv) {
   global.debug = argv.debug;
   const logger = createLogger(argv.dir);
   try {
-    await sync(argv);
-    let targets = await cache.read();
-    if (!argv.all) {
-      targets = argv.hash.map(hash => {
-        const reg = new RegExp(hash + '.+');
-        const matched = targets.filter(task => argv.all || String(task.hash).match(reg));
-        if (matched.length !== 1) throw new Error(`ambiguous argument: '${hash}'`);
-        return matched[0];
-      });
-    }
+    const targets = await cache.read('ORDER BY id DESC');
     targets.forEach(task => {
       task.due_date = argv.until || '';
       task.due_lang = argv.lang || LANG;
       task.due_string = '';
-      render.remember(task);
-      if (task.deleted) {
-        api.create(task);
-      } else {
-        api.update(task);
-      }
-      logger.info('Remembered', task);
     });
+    if (targets.length) console.table(targets);
   } catch(e) {
     console.error(e);
     logger.error(e);
   }
-}
-
-async function sync(argv) {
-  cache.create();
-  const lastTask = await cache.read('ORDER BY id DESC LIMIT 1');
-  const lastId = lastTask.length ? lastTask[0].id : 0;
-  const tasks = await api.read();
-  const today = new Date();
-  tasks
-    .filter(t => t.id > lastId)
-    .forEach(t => cache.update(Object.assign(t, { synced: today.toISOString() })));
 }
