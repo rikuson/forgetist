@@ -23,13 +23,13 @@ require('yargs')
   )
   .command(
     'list',
-    'List overdue tasks',
+    'List active tasks',
     (yargs) => {},
     list,
   )
   .command(
     'remember [hash...]',
-    'Reschedule overdue tasks',
+    'List overdue tasks',
     (yargs) => {
       yargs.positional('hash', { describe: 'task hash' });
     },
@@ -40,25 +40,10 @@ require('yargs')
     type: 'boolean',
     description: 'All of the overdue task',
   })
-  .option('until', {
-    alias: 'u',
-    type: 'string',
-    description: 'Due date',
-  })
-  /* TODO
   .option('ctime', {
     type: 'number',
     description: 'Filter by created time'
   })
-  .option('dtime', {
-    type: 'number',
-    description: 'Filter by deleted time'
-  })
-  .option('otime', {
-    type: 'number',
-    description: 'Filter by over time'
-  })
-  */
   .option('log', {
     type: 'string',
     description: 'Path to log directory',
@@ -69,7 +54,7 @@ require('yargs')
   })
   .option('debug', {
     type: 'boolean',
-    description: 'Debug mode.',
+    description: 'Debug mode',
   })
   .argv;
 
@@ -124,8 +109,8 @@ async function remember(argv) {
       task.due_date = argv.until || '';
       task.due_lang = argv.lang || LANG;
       task.due_string = '';
+      render.remember(task);
     });
-    if (targets.length) console.table(targets);
   } catch(e) {
     console.error(e);
     logger.error(e);

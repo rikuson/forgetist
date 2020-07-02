@@ -1,13 +1,12 @@
 # Forgetist
 
-Life hacking tool using todoist.
+Life hacking tool using [Todoist](https://todoist.com).
 
 ## Let's forget the past
 
-I don't like seeing incomplete tasks which should have done few months ago.  
-Forgetist simply deletes overdue tasks from [Todoist](https://todoist.com).  
-It only affects to overdue tasks.
+Forgetist simply deletes overdue tasks from [Todoist](https://todoist.com).
 
+I don't like seeing incomplete tasks which should have done few months ago.  
 If you just leave it, those tasks are not important in your life.  
 Then let's forget it and start brand new day!
 
@@ -31,60 +30,73 @@ $ forgetist --help
 forgetist [command]
 
 Commands:
-  forgetist forget [id...]    Delete overdue task
-  forgetist list              List overdue tasks
-  forgetist remember [id...]  Reschedule overdue tasks
+  forgetist list              List active tasks
+  forgetist forget [hash...]  Delete overdue task
+  forgetist remember          List deleted overdue tasks
 
 Options:
-  --help             Show help
-  --version          Show version number
-  --all, -a          All of the overdue task
-  --from             From the datetime
-  --to               To the datetime
-  --until, -u        Due date
+  --help                      Show help
+  --version                   Show version number
+  --all, -a                   All of the overdue task
+  --ctime                     Filter by created time
+  --log                       Path to log directory
+  --lang                      Specify language to parse date string
+  --debug                     Debug mode
 ```
 
-List overdue tasks.
+### List active tasks.
 
 ```
 $ forgetist list
-┌─────┬──────┬───────┬────────────┬───────┐
-│ (index)  │     ID     │   CONTENT    │        CREATED         │   DUE DATE   │
-├─────┼──────┼───────┼────────────┼───────┤
-│    0     │ 1234567890 │'first task'  │'2020-06-11T11:19:55Z'  │ '2020-06-11' │
-│    1     │ 2345678901 │'second task' │'2020-06-11T16:49:47Z'  │ '2020-06-09' │
-└─────┴──────┴───────┴────────────┴───────┘
+01b307acba4f54f55aafc33bb06bbbf6ca803e9a
+DUE DATE: 2020-07-01
+CREATED:  2020-07-01T17:34:55Z
+
+first task
+
+bd0888b5c8172bbe418736b952d5d50d277ce7aa
+DUE DATE: 2020-07-02
+CREATED:  2020-07-02T17:34:55Z
+
+second task
+
+$ forgetist list --ctime=-1
+bd0888b5c8172bbe418736b952d5d50d277ce7aa
+DUE DATE: 2020-07-02
+CREATED:  2020-07-02T17:34:55Z
+
+second task
+
 ```
 
-List all overdue tasks including deleted task.
+### Delete overdue tasks.
 
 ```
-$ forgetist list --all
-$ forgetist list --from="2020-06-10"
-```
+$ forgetist forget 01b3
+Delete 01b307acba4f54f55aafc33bb06bbbf6ca803e9a
 
-Delete overdue tasks.
-
-```
 $ forgetist forget --all
-```
-
-You can specify task id.
-
-```
-$ forgetist forget 1234
-```
-
-Don't worry, there's log option.
+Delete 01b307acba4f54f55aafc33bb06bbbf6ca803e9a
+Delete bd0888b5c8172bbe418736b952d5d50d277ce7aa
 
 ```
-$ forgetist forget 1234 --log
-```
 
-Reschedule a task.
+### List deleted overdue tasks.
 
 ```
-$ forgetist remember 1234 --to="2020-06-13"
+$ forgetist remember
+ID: 1234567890
+DUE DATE: 2020-07-01
+DELETED:  2020-07-03T17:34:55Z
+
+first task
+
+ID: 2345678901
+DUE DATE: 2020-07-02
+DELETED:  2020-07-03T17:34:55Z
+
+second task
+
 ```
 
 ## Want pressure?
