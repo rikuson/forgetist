@@ -30,7 +30,7 @@ $ forgetist --help
 forgetist [command]
 
 Commands:
-  forgetist list              List active tasks
+  forgetist list              List overdue tasks
   forgetist forget [hash...]  Delete overdue task
   forgetist remember          List deleted overdue tasks
 
@@ -44,7 +44,7 @@ Options:
   --debug                     Debug mode
 ```
 
-### List active tasks.
+### List overdue tasks.
 
 ```
 $ forgetist list

@@ -74,7 +74,6 @@ async function forget(argv) {
     targets.forEach(task => {
       render.forget(task);
       api.delete(task);
-      task.deleted = today.toISOString();
       cache.update(task);
       logger.info('Deleted', task);
     });
@@ -106,9 +105,6 @@ async function remember(argv) {
   try {
     const targets = await cache.read('ORDER BY id DESC');
     targets.forEach(task => {
-      task.due_date = argv.until || '';
-      task.due_lang = argv.lang || LANG;
-      task.due_string = '';
       render.remember(task);
     });
   } catch(e) {
