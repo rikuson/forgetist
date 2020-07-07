@@ -3,12 +3,12 @@
 
 // TODO: Enable using without network
 // TODO: Add columns is_deleted, is_lost
-const { api, cache, hash, createLogger, render } = require('./lib');
+const { api, trash, hash, createLogger, render } = require('./lib');
 
 const que = []; // TODO: Use setInterval
 const LANG = Intl.NumberFormat().resolvedOptions().locale.slice(0, 2);
 
-cache.create();
+trash.create();
 
 // TODO: unknown command
 // TODO: invalid options
@@ -74,7 +74,7 @@ async function forget(argv) {
     targets.forEach(task => {
       render.forget(task);
       api.delete(task);
-      cache.update(task);
+      trash.add(task);
       logger.info('Deleted', task);
     });
   } catch (e) {
@@ -103,7 +103,7 @@ async function remember(argv) {
   global.debug = argv.debug;
   const logger = createLogger(argv.dir);
   try {
-    const targets = await cache.read('ORDER BY id DESC');
+    const targets = await trash.read('ORDER BY id DESC');
     targets.forEach(task => {
       render.remember(task);
     });
