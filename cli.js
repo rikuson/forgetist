@@ -58,7 +58,7 @@ async function forget(argv) {
       return matched[0];
     });
     targets.forEach(task => {
-      render.forget(task);
+      console.info(render.forget(task));
       api.delete(task);
       trash.add(task);
       logger.info('Deleted', task);
@@ -76,7 +76,7 @@ async function list(argv) {
     const targets = await api.read();
     targets.forEach(target => {
       target.hash = hash(target.id);
-      render.list(target);
+      console.info(render.list(target));
     });
   } catch (e) {
     console.error(e);
@@ -90,7 +90,7 @@ async function remember(argv) {
   try {
     const targets = await trash.read('ORDER BY id DESC');
     targets.forEach(task => {
-      render.remember(task);
+      console.info(render.remember(task));
     });
   } catch(e) {
     console.error(e);
