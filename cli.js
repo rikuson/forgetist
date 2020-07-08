@@ -1,17 +1,10 @@
 #!/usr/bin/env node
 "use strict";
 
-// TODO: Enable using without network
-// TODO: Add columns is_deleted, is_lost
 const { api, trash, hash, createLogger, render } = require('./lib');
-
-const que = []; // TODO: Use setInterval
-const LANG = Intl.NumberFormat().resolvedOptions().locale.slice(0, 2);
 
 trash.create();
 
-// TODO: unknown command
-// TODO: invalid options
 require('yargs')
   .command(
     'forget [hash...]', 
@@ -24,15 +17,11 @@ require('yargs')
   .command(
     'list',
     'List active tasks',
-    (yargs) => {},
     list,
   )
   .command(
-    'remember [hash...]',
+    'remember',
     'List overdue tasks',
-    (yargs) => {
-      yargs.positional('hash', { describe: 'task hash' });
-    },
     remember,
   )
   .option('all', {
@@ -48,14 +37,11 @@ require('yargs')
     type: 'string',
     description: 'Path to log directory',
   })
-  .option('lang', {
-    type: 'string',
-    description: 'Specify language to parse date string',
-  })
   .option('debug', {
     type: 'boolean',
     description: 'Debug mode',
   })
+  .strict()
   .argv;
 
 async function forget(argv) {
@@ -87,7 +73,6 @@ async function list(argv) {
   global.debug = argv.debug;
   const logger = createLogger(argv.dir);
   try {
-    // TODO: think about api interval limit
     const targets = await api.read();
     targets.forEach(target => {
       target.hash = hash(target.id);

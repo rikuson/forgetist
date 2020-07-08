@@ -40,7 +40,6 @@ Options:
   --all, -a                   All of the overdue task
   --ctime                     Filter by created time
   --log                       Path to log directory
-  --lang                      Specify language to parse date string
   --debug                     Debug mode
 ```
 
