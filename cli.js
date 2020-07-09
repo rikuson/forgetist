@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 "use strict";
 
-const { api, trash, hash, createLogger, render } = require('./lib');
+const { api, trash, createLogger, render, ctime } = require('./lib');
 
 trash.create();
 
@@ -17,11 +17,13 @@ require('yargs')
   .command(
     'list',
     'List active tasks',
+    (yargs) => {},
     list,
   )
   .command(
     'remember',
     'List overdue tasks',
+    (yargs) => {},
     remember,
   )
   .option('all', {
@@ -30,7 +32,7 @@ require('yargs')
     description: 'All of the overdue task',
   })
   .option('ctime', {
-    type: 'number',
+    type: 'string',
     description: 'Filter by created time'
   })
   .option('log', {
@@ -49,8 +51,7 @@ async function forget(argv) {
   const logger = createLogger(argv.dir);
   const today = new Date();
   try {
-    const tasks = await api.read();
-    tasks.forEach(task => task.hash = hash(task.id));
+    const tasks = (await api.read()).filter(task => ctime(task, argv.ctime));
     const targets = argv.all ? tasks : argv.hash.map(hash => {
       const reg = new RegExp(hash + '.+');
       const matched = tasks.filter(task => argv.all || task.hash.match(reg));
@@ -73,9 +74,8 @@ async function list(argv) {
   global.debug = argv.debug;
   const logger = createLogger(argv.dir);
   try {
-    const targets = await api.read();
+    const targets = (await api.read()).filter(task => ctime(task, argv.ctime));
     targets.forEach(target => {
-      target.hash = hash(target.id);
       console.info(render.list(target));
     });
   } catch (e) {
@@ -88,7 +88,7 @@ async function remember(argv) {
   global.debug = argv.debug;
   const logger = createLogger(argv.dir);
   try {
-    const targets = await trash.read('ORDER BY id DESC');
+    const targets = (await trash.read('ORDER BY id DESC')).filter(task => ctime(task, argv.ctime));
     targets.forEach(task => {
       console.info(render.remember(task));
     });
