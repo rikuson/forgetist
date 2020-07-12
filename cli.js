@@ -51,7 +51,7 @@ async function forget(argv) {
   const logger = createLogger(argv.dir);
   const today = new Date();
   try {
-    const tasks = (await api.read()).filter(task => ctime(task, argv.ctime));
+    const tasks = (await api.read()).filter(task => !argv.ctime || ctime(task, argv.ctime));
     const targets = argv.all ? tasks : argv.hash.map(hash => {
       const reg = new RegExp(hash + '.+');
       const matched = tasks.filter(task => argv.all || task.hash.match(reg));
@@ -74,7 +74,7 @@ async function list(argv) {
   global.debug = argv.debug;
   const logger = createLogger(argv.dir);
   try {
-    const targets = (await api.read()).filter(task => ctime(task, argv.ctime));
+    const targets = (await api.read()).filter(task => !argv.ctime || ctime(task, argv.ctime));
     targets.forEach(target => {
       console.info(render.list(target));
     });
@@ -88,7 +88,9 @@ async function remember(argv) {
   global.debug = argv.debug;
   const logger = createLogger(argv.dir);
   try {
-    const targets = (await trash.read('ORDER BY id DESC')).filter(task => ctime(task, argv.ctime));
+    const targets = (await trash.read('ORDER BY id DESC')).filter(task => {
+      return !argv.ctime || ctime(task, argv.ctime);
+    });
     targets.forEach(task => {
       console.info(render.remember(task));
     });
