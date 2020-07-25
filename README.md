@@ -41,6 +41,7 @@ Options:
   --ctime                     Filter by created time
   --log                       Path to log directory
   --debug                     Debug mode
+  --token                     Todoist api token
 ```
 
 ### List overdue tasks.
