@@ -1,5 +1,7 @@
-const { api } = require('../lib');
+const { createApi } = require('../lib');
 const { assert } = require('chai');
+
+const api = createApi(process.env.TODOIST_API_TOKEN);
 
 describe('api', () => {
   let id;
