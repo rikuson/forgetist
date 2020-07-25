@@ -52,7 +52,7 @@ require('yargs')
 
 async function forget(argv) {
   global.debug = argv.debug;
-  const logger = createLogger(argv.dir);
+  const logger = createLogger(argv.log);
   const api = createApi(argv.token || process.env.TODOIST_API_TOKEN);
   const today = new Date();
   try {
@@ -77,7 +77,7 @@ async function forget(argv) {
 
 async function list(argv) {
   global.debug = argv.debug;
-  const logger = createLogger(argv.dir);
+  const logger = createLogger(argv.log);
   const api = createApi(argv.token || process.env.TODOIST_API_TOKEN);
   try {
     const targets = (await api.read()).filter(task => !argv.ctime || ctime(task, argv.ctime));
@@ -92,7 +92,7 @@ async function list(argv) {
 
 async function remember(argv) {
   global.debug = argv.debug;
-  const logger = createLogger(argv.dir);
+  const logger = createLogger(argv.log);
   const api = createApi(argv.token || process.env.TODOIST_API_TOKEN);
   try {
     const targets = (await trash.read('ORDER BY id DESC')).filter(task => {
