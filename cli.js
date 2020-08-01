@@ -3,8 +3,6 @@
 
 const { trash, createApi, createLogger, render, ctime } = require('./lib');
 
-trash.create();
-
 require('yargs')
   .command(
     'forget [hash...]', 
@@ -95,7 +93,7 @@ async function remember(argv) {
   const logger = createLogger(argv.log);
   const api = createApi(argv.token || process.env.TODOIST_API_TOKEN);
   try {
-    const targets = (await trash.read('ORDER BY id DESC')).filter(task => {
+    const targets = (await trash.read()).filter(task => {
       return !argv.ctime || ctime(task, argv.ctime);
     });
     targets.forEach(task => {

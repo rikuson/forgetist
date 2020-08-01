@@ -9,6 +9,7 @@
   "dependencies": {
     "bent": "^7.3.4",
     "log4js": "^6.3.0",
+    "sqlite": "^4.0.12",
     "sqlite3": "^4.2.0",
     "time-convert": "0.0.2",
     "yargs": "^15.3.1"
@@ -20,6 +21,7 @@
   "scripts": {
     "test": "mocha"
   },
+  "postinstall": "node migrate.js",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/rikuson/forgetist.git"
