@@ -19,9 +19,9 @@
     "mocha": "^8.0.1"
   },
   "scripts": {
-    "test": "mocha"
+    "test": "mocha",
+    "postinstall": "node migrate.js"
   },
-  "postinstall": "node migrate.js",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/rikuson/forgetist.git"
