@@ -20,7 +20,8 @@
   },
   "scripts": {
     "test": "mocha",
-    "postinstall": "node migrate.js"
+    "preinstall": "node preinstall.js",
+    "postinstall": "node postinstall.js"
   },
   "repository": {
     "type": "git",
