@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "bent": "^7.3.4",
+    "get-installed-path": "^4.0.8",
     "log4js": "^6.3.0",
     "sqlite": "^4.0.12",
     "sqlite3": "^4.2.0",
