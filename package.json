@@ -1,6 +1,6 @@
 {
   "name": "forgetist",
-  "version": "0.3.4",
+  "version": "0.3.5",
   "description": "Delete past tasks.",
   "main": "cli.js",
   "bin": {
