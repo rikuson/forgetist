@@ -1,5 +1,7 @@
 # Forgetist
 
+[![CI](https://github.com/rikuson/forgetist/actions/workflows/node.js.yml/badge.svg)](https://github.com/rikuson/forgetist/actions/workflows/node.js.yml)
+
 Life hacking tool using [Todoist](https://todoist.com).
 
 ## Let's forget the past
